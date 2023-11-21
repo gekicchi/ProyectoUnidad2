@@ -1,4 +1,3 @@
-Name,PowerLevel,Master,City
 Freya,100,None,Tesla Capital
 Skadi,97,Freya,Tesla Capital
 Magni,92,Freya,Tesla Capital
