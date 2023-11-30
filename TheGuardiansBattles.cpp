@@ -5,6 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <stack>
+#include <cstdlib>
 using namespace std;
 
 struct Guardian
@@ -33,47 +34,6 @@ struct RankedGuardian
 	RankedGuardian(Guardian *info) : Info(info), left(nullptr), right(nullptr) {}
 };
 
-class Hierarchy
-{
-	public:
-		Hierarchy() { root = nullptr; }
-		~Hierarchy() {}
-		
-		void Insert(GeneralGuardian *guardian) { InsertGuardian(root, guardian); }
-		void InsertGuardian(GeneralGuardian *current, GeneralGuardian *newGuardian);
-		
-		bool Search(int level) { return SearchGuardian(root, level); }
-		bool SearchGuardian(GeneralGuardian *current, int level);
-		
-		void Print() { PrintHierarchy(root, 0); }
-		void PrintHierarchy(GeneralGuardian *current, int depth);
-		
-		void Delete() {}
-		void DeleteGuardian(GeneralGuardian *current, string name);
-		
-	private:
-		GeneralGuardian *root;
-};
-
-class Ranking
-{
-	public:
-		Ranking() { root = nullptr; }
-		~Ranking() {}
-		
-		void Insert(RankedGuardian *guardian) { root = InsertGuardian(root, guardian); }
-		RankedGuardian* InsertGuardian(RankedGuardian *current, RankedGuardian *newGuardian);
-		
-		bool Search(int level) { return SearchGuardian(root, level); }
-		bool SearchGuardian(RankedGuardian *current, int level);
-			
-		void Print() { PrintRanking(root); }
-		void PrintRanking(RankedGuardian *current);
-		
-	private:
-		RankedGuardian *root;
-};
-
 class Map
 {
 	public:
@@ -83,6 +43,9 @@ class Map
 		void setCityNames(int num, string name) { cityNames[num] = name; }
 		unordered_map<int, string> getCityNames() { return cityNames; }
 		
+		void setCityNumbers(string name, int num) { cityNumbers[name] = num; }
+		unordered_map<string, int> getCityNumbers() { return cityNumbers; }
+		
 		void AddPath(int start, int end);
 		bool AreAdjacent(int start, int end);
 		bool FindPath(int start, int end);
@@ -91,32 +54,91 @@ class Map
 	private:
 		vector<vector<int>> paths;
 		unordered_map<int, string> cityNames;
+		unordered_map<string, int> cityNumbers;
 };
 
-void ReadGuardiansFile(char *file_name, Ranking *ranking, Hierarchy *hierarchy);
-void ReadCitiesFile(char *file_name, Map *map);
+class Hierarchy
+{
+	public:
+		Hierarchy() { root = nullptr; }
+		~Hierarchy() {}
+		
+		void Insert(GeneralGuardian *guardian) { InsertGuardian(root, guardian); }
+		bool Search(string name) { return SearchGuardian(root, name); }
+		Guardian* Get(string name) { return GetGuardian(root, name); }
+		void Print() { PrintHierarchy(root, 0); }
+		void Delete() {}
+		
+	private:
+		GeneralGuardian *root;
+		
+		void InsertGuardian(GeneralGuardian *current, GeneralGuardian *newGuardian);
+		bool SearchGuardian(GeneralGuardian *current, string name);
+		Guardian* GetGuardian(GeneralGuardian *current, string name);
+		void PrintHierarchy(GeneralGuardian *current, int depth);
+		void DeleteGuardian(GeneralGuardian *current, string name);
+};
+
+class Ranking
+{
+	public:
+		Ranking() { root = nullptr; }
+		~Ranking() {}
+		
+		void Insert(RankedGuardian *guardian) { root = InsertGuardian(root, guardian); }
+		bool Search(int level) { return SearchGuardian(root, level); }
+		void Print() { PrintRanking(root); }
+		void Reorder() { ReorderRanking(root); }
+		
+	private:
+		RankedGuardian *root;
+		
+		RankedGuardian* InsertGuardian(RankedGuardian *current, RankedGuardian *newGuardian);
+		bool SearchGuardian(RankedGuardian *current, int level);
+		void PrintRanking(RankedGuardian *current);
+		RankedGuardian* ReorderRanking(RankedGuardian *current);
+};
+
+int ReadGuardiansFile(char *file_name, Ranking *ranking, Hierarchy *hierarchy);
+int ReadCitiesFile(char *file_name, Map *map);
 void StartEndPath(Map map, int *start, int *end);
+void SelectGuardian(Guardian **selection, Ranking list, Hierarchy *guardians);
+void WatchFight(Guardian *player, Guardian *rival, Ranking *ranking);
 
 int main(int argc, char *argv[])
 {
-	int election, subElection, start, end;
+	if (argc < 3)
+	{
+		cout << "Usage: " << argv[0] << " <archivo_guardianes>.txt <archivo_ciudades>.txt" << endl;
+		return 1;
+	}
 	
+	int election, subElection, start, end, position = 0;
+	Guardian *playableGuardian = nullptr, *rivalGuardian = nullptr;
 	Ranking ranking;
 	Hierarchy hierarchy;
 	vector<vector<int>> list(20);
 	Map map(list);
 	
-	ReadGuardiansFile(argv[1], &ranking, &hierarchy);
-	ReadCitiesFile(argv[2], &map);
+	int lecturaGuardianes = ReadGuardiansFile(argv[1], &ranking, &hierarchy);
+	if (lecturaGuardianes != 0)
+	{
+		if (lecturaGuardianes == 1)
+			cout << "Separe los datos con comas ',' sin espacios entremedio" << endl;
+		else if (lecturaGuardianes == 2)
+			cout << "Solo se Acepta UN Guardian con 100 Puntos de Poder" << endl;
+		else
+			cout << "Solo se Aceptan MAXIMO TRES Guardianes con 90-99 Puntos de Poder" << endl;
+			
+		return 2;
+	}
 	
-	ranking.Print();
-	cout << endl << endl << endl;
-	hierarchy.Print();
-	cout << endl << endl << endl;
-	map.Print();
-	
-	map.FindPath(0,2);
-	map.FindPath(3,10);
+	int lecturaCiudades = ReadCitiesFile(argv[2], &map);
+	if (lecturaCiudades == 1)
+	{
+		cout << "Separe los datos con comas ',' sin espacios entremedio" << endl;
+		return 3;
+	}
 	
 	do{
 		cout << "----The Guardian's Battles----" << endl;
@@ -133,12 +155,19 @@ int main(int argc, char *argv[])
 				break;
 				
 			case 2: // ver guardian
-				cout << "INFO DE GUARDIAN" << endl;
+				if (playableGuardian != nullptr)
+				{
+					cout << "INFO DE GUARDIAN:" << endl;
+					cout << "Nombre: "<< playableGuardian->Name << endl << "Nivel: " << playableGuardian->Level << endl << "Ciudad: " << playableGuardian->City << endl << "Maestro: " << playableGuardian->Master;
+					cout << endl;
+				}
+				else
+					cout << "Elija Guardian Para ver su Informacion..." << endl;
 				break;
 				
 			case 3: // conocer reino
 				cout << "CONOCIENDO REINO" << endl;
-				cout << "[1] Construir Camino\n[2] Consultar Camino";
+				cout << "[1] Construir Camino\n[2] Consultar Camino\n";
 				cout << "Eleccion: ";
 				cin >> subElection;
 				switch (subElection)
@@ -156,7 +185,30 @@ int main(int argc, char *argv[])
 				break;
 				
 			case 4: // presenciar batalla
-				cout << "PRESENCIANDO BATALLA" << endl;
+				cout << "GUARDIAN DE JUGADOR: " << endl;
+				SelectGuardian(&playableGuardian, ranking, &hierarchy);
+				
+				cout << "GUARDIAN RIVAL: " << endl;
+				SelectGuardian(&rivalGuardian, ranking, &hierarchy);
+				
+				if (playableGuardian != nullptr && rivalGuardian != nullptr)
+				{
+					if (map.FindPath(map.getCityNumbers()[playableGuardian->City], map.getCityNumbers()[rivalGuardian->City]))
+					{
+						WatchFight(playableGuardian, rivalGuardian, &ranking);
+					}
+					else
+					{
+						cout << "Imposible Combatir a Guardian" << endl;
+					}
+				}
+				else
+				{
+					cout << "No se Puede Efectuar Pelea" << endl;
+					cout << rivalGuardian->Name << endl;
+					
+					cout << playableGuardian->Name << endl;
+				}
 				break;
 		}
 		cout << endl;
@@ -183,6 +235,36 @@ void Hierarchy::InsertGuardian(GeneralGuardian *current, GeneralGuardian *newGua
 	}
 }
 
+bool Hierarchy::SearchGuardian(GeneralGuardian *current, string name)
+{
+	if (root == nullptr || current == nullptr)
+		return false;
+		
+	if (name.compare(current->Info->Name) == 0)
+		return true;
+		
+	for (GeneralGuardian *guardian : current->Apprentices)
+	{
+		if (SearchGuardian(guardian, name))
+			return true;
+	}
+}
+
+Guardian* Hierarchy::GetGuardian(GeneralGuardian *current, string name)
+{
+	if (root == nullptr || current == nullptr)
+		return nullptr;
+		
+	if (name.compare(current->Info->Name) == 0)
+		return current->Info;
+		
+	for (GeneralGuardian *guardian : current->Apprentices)
+		if (GetGuardian(guardian, name) != nullptr)
+			return GetGuardian(guardian, name);
+			
+	return nullptr;
+}
+
 // imprimir jerarquia
 void Hierarchy::PrintHierarchy(GeneralGuardian *current, int depth)
 {
@@ -193,6 +275,44 @@ void Hierarchy::PrintHierarchy(GeneralGuardian *current, int depth)
 	
 	for (GeneralGuardian *apprentices : current->Apprentices)
 		PrintHierarchy(apprentices, depth+1);
+}
+
+RankedGuardian* Ranking::ReorderRanking(RankedGuardian *current)
+{
+	if (current == nullptr)
+		return current;
+	
+	if (current->left != nullptr)
+	{
+		if (current->Info->Level >= current->left->Info->Level)
+			current->left = ReorderRanking(current->left);
+		else
+		{
+			RankedGuardian *changing = current->right, *original = current;
+			while (temp->left != nullptr)
+				temp = temp->left;
+				
+			current->Info = temp->Info;
+			current = InsertGuardian(root, current);
+		}
+	}
+	else
+	{
+	}
+	if (current->right != nullptr)
+	{
+		if (current->Info->Level <= current->right->Info->Level)
+			current->right = ReorderRanking(current->right);
+		else
+		{
+			
+		}
+	}
+	else
+	{
+	}
+	
+	return current;
 }
 
 /**** FUNCIONES PARA EL RANKING ****/
@@ -210,6 +330,20 @@ RankedGuardian* Ranking::InsertGuardian(RankedGuardian *current, RankedGuardian 
 	return current;
 }
 
+bool Ranking::SearchGuardian(RankedGuardian *current, int level)
+{
+	if (root == nullptr || current == nullptr)
+		return false;
+		
+	if (current->Info->Level == level)
+		return true;
+	
+	if (current->Info->Level > level)
+		return SearchGuardian(current->left, level);
+	if (current->Info->Level < level)
+		return SearchGuardian(current->right, level);
+}
+
 // imprimir ranking
 void Ranking::PrintRanking(RankedGuardian *current)
 {
@@ -218,7 +352,7 @@ void Ranking::PrintRanking(RankedGuardian *current)
 		
 	PrintRanking(current->right);
 	
-	cout << current->Info->Level << ") " << current->Info->Name;
+	cout << current->Info->Name << " [" << current->Info->Level << "]";
 	if (current->Info->Level >= 90 && current->Info->Level < 100)
 		cout << " (Candidato a Guardian)";
 	cout << endl;
@@ -303,8 +437,9 @@ void Map::Print()
 
 /**** RESTO DE FUNCIONES ****/
 // lee archivo de guardianes
-void ReadGuardiansFile(char *file_name, Ranking *ranking, Hierarchy *hierarchy)
+int ReadGuardiansFile(char *file_name, Ranking *ranking, Hierarchy *hierarchy)
 {
+	int maxLevelGuardian = 0, candidateGuardians = 0;
 	ifstream guardians(file_name);
 	
 	if (guardians.is_open())
@@ -317,7 +452,12 @@ void ReadGuardiansFile(char *file_name, Ranking *ranking, Hierarchy *hierarchy)
 			vector<string> chunks;
 			
 			while (getline(ss,chunk,','))
+			{
+				if (chunk[0] == ' ')
+					return 1;
+					
 				chunks.push_back(chunk);
+			}
 				
 			string city = chunks.back();
 			chunks.pop_back();
@@ -335,14 +475,27 @@ void ReadGuardiansFile(char *file_name, Ranking *ranking, Hierarchy *hierarchy)
 			RankedGuardian *newRanking = new RankedGuardian(newGuardian);
 			GeneralGuardian *newHierarchy = new GeneralGuardian(newGuardian);
 			
+			if (newGuardian->Level == 100)
+				maxLevelGuardian++;
+			if (maxLevelGuardian > 1)
+				return 2;
+				
+			if (newGuardian->Level >= 90 && newGuardian->Level < 100)
+				candidateGuardians++;
+			if (candidateGuardians > 3)
+				return 3;
+			
 			ranking->Insert(newRanking);
 			hierarchy->Insert(newHierarchy);
 		}
 	}
+	
 	guardians.close();
+	return 0;
 }
 
-void ReadCitiesFile(char *file_name, Map *map)
+// lee archivo de ciudades
+int ReadCitiesFile(char *file_name, Map *map)
 {
 	ifstream cities(file_name);
 	
@@ -358,7 +511,12 @@ void ReadCitiesFile(char *file_name, Map *map)
 			bool cityExists = false, connectionExists = false;
 			
 			while (getline(ss,chunk,','))
+			{
+				if (chunk[0] == ' ')
+					return 1;
+				
 				chunks.push_back(chunk);
+			}
 			
 			string connection = chunks.back();
 			chunks.pop_back();
@@ -388,18 +546,22 @@ void ReadCitiesFile(char *file_name, Map *map)
 			{
 				cityPos = map->getCityNames().size();
 				map->setCityNames(map->getCityNames().size(), city);
+				map->setCityNumbers(city, map->getCityNumbers().size());
 			}
 			
 			if (!connectionExists)
 			{
 				connectionPos = map->getCityNames().size();
 				map->setCityNames(map->getCityNames().size(), connection);
+				map->setCityNumbers(connection, map->getCityNumbers().size());
 			}
 			
 			map->AddPath(cityPos, connectionPos);
 		}
 	}
+	
 	cities.close();
+	return 0;
 }
 
 void StartEndPath(Map map, int *start, int *end)
@@ -413,4 +575,50 @@ void StartEndPath(Map map, int *start, int *end)
 	map.Print();
 	cout << endl << "Eleccion: ";
 	cin >> *end;
+}
+
+void SelectGuardian(Guardian **selection, Ranking list, Hierarchy *guardians)
+{
+	string name;
+	cout << "Lista de Guardianes: " << endl;
+	list.Print();
+	
+	cout << "Escriba nombre del Guardian Deseado: ";
+	cin >> name;
+	cout << endl;
+	
+	if (guardians->Search(name))
+	{
+		*selection = guardians->Get(name);
+		cout << "Guardian Seleccionado Correctamente" << endl;
+	}
+	else
+	{
+		*selection = nullptr;
+		cout << "No Existe Guardian con ese Nombre" << endl;
+	}
+}
+
+void WatchFight(Guardian *player, Guardian *rival, Ranking *ranking)
+{
+	int winCondition = rand()%10;
+	
+	if (winCondition < 4)
+	{
+		cout << player->Name << " Ha Ganado la Pelea..." << endl;
+		cout << player->Name << " Ha Conseguido 3 Puntos de Poder." << endl;
+		player->Level += 3;
+		cout << rival->Name << " Ha Perdidio 2 Puntos de Poder." << endl;
+		rival->Level -= 2;
+	}
+	else
+	{
+		cout << rival->Name << " Ha Ganado la Pelea..." << endl;
+		cout << rival->Name << " Ha Conseguido 3 Puntos de Poder." << endl;
+		rival->Level += 3;
+		cout << player->Name << " Ha Perdidio 2 Puntos de Poder." << endl;
+		player->Level -= 2;
+	}
+	
+	//ranking->Reorder();
 }
