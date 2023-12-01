@@ -1,0 +1,5 @@
+1. Debe contar con el programa DEV-C++ (preferibemente la version 5.11)
+2. Clone el repositorio en su computador
+3. Abra el archivo TheGuardiansBattles.c en DEV-C++
+4. En Execute -> Parameters, ingrese lo siguiente: guardians.txt cities.txt
+5. Seleccione la opción Compile & Execute
